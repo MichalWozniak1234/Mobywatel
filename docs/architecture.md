@@ -4,7 +4,9 @@ This document describes the planned folder and project structure for the Mobywat
 
 The system consists of:
 
-- backend API,
+- backend monolith,
+- User API,
+- Admin API,
 - citizen web application,
 - admin web application,
 - citizen mobile application,
@@ -12,7 +14,23 @@ The system consists of:
 - documentation,
 - Docker configuration.
 
-The main goal of this structure is to separate backend logic, frontend applications, mobile application, tests and documentation in a clean and maintainable way.
+The main goal of this structure is to keep the backend as one deployable monolith while separating internal business logic, API surfaces, frontend applications, mobile application, tests and documentation in a clean and maintainable way.
+
+The backend architecture is:
+
+```txt
+Single deployable backend monolith
+    ├── User API
+    ├── Admin API
+    └── Internal Clean Architecture
+            ├── Api
+            ├── Application
+            ├── Domain
+            ├── Infrastructure
+            └── Shared
+```
+
+The Application layer uses CQRS with MediatR. Controllers do not contain business logic. They only validate HTTP concerns, authorize access and send commands or queries through MediatR.
 
 ---
 
@@ -26,12 +44,20 @@ Mobywatel/
 │   ├── Backend/
 │   │   ├── Mobywatel.Api/
 │   │   │   ├── Controllers/
-│   │   │   │   ├── AuthController.cs
-│   │   │   │   ├── CitizensController.cs
-│   │   │   │   ├── DocumentsController.cs
-│   │   │   │   ├── DocumentTypesController.cs
-│   │   │   │   ├── ActivityLogsController.cs
-│   │   │   │   └── AdminController.cs
+│   │   │   │   ├── UserApi/
+│   │   │   │   │   ├── AuthController.cs
+│   │   │   │   │   ├── ProfileController.cs
+│   │   │   │   │   ├── DocumentsController.cs
+│   │   │   │   │   └── ActivityLogsController.cs
+│   │   │   │   │
+│   │   │   │   └── AdminApi/
+│   │   │   │       ├── AuthController.cs
+│   │   │   │       ├── DashboardController.cs
+│   │   │   │       ├── UsersController.cs
+│   │   │   │       ├── DocumentsController.cs
+│   │   │   │       ├── DocumentTypesController.cs
+│   │   │   │       ├── ActivityLogsController.cs
+│   │   │   │       └── AdminsController.cs
 │   │   │   │
 │   │   │   ├── Middlewares/
 │   │   │   ├── Filters/
@@ -44,7 +70,8 @@ Mobywatel/
 │   │   │   │   ├── Interfaces/
 │   │   │   │   ├── Exceptions/
 │   │   │   │   ├── Models/
-│   │   │   │   └── Security/
+│   │   │   │   ├── Security/
+│   │   │   │   └── Behaviors/
 │   │   │   │
 │   │   │   ├── Auth/
 │   │   │   │   ├── Commands/
@@ -290,3 +317,76 @@ Mobywatel/
 ├── README.md
 ├── .gitignore
 └── Mobywatel.sln
+```
+
+---
+
+# Backend Architecture Rules
+
+The backend is a monolith. It is deployed and run as one ASP.NET Core application, but it exposes two logical APIs:
+
+```txt
+User API   - citizen-facing endpoints used by CitizenMobile and CitizenWeb
+Admin API  - administration endpoints used by AdminWeb
+```
+
+Both APIs use the same Application, Domain, Infrastructure and database. They must not duplicate business logic.
+
+## API Surface Split
+
+The API project should keep controllers separated by responsibility:
+
+```txt
+Mobywatel.Api/Controllers/UserApi/
+Mobywatel.Api/Controllers/AdminApi/
+```
+
+Recommended route prefixes:
+
+```txt
+/api/user/*
+/api/admin/*
+```
+
+Authentication endpoints should be exposed under `/api/user/auth` and `/api/admin/auth`. The preferred MVP approach is to reuse the same authentication use cases internally and apply role checks after login.
+
+## Internal Clean Architecture
+
+The backend follows internal Clean Architecture dependency rules:
+
+```txt
+Api -> Application -> Domain
+Infrastructure -> Application -> Domain
+Shared can be used for simple cross-cutting contracts and result types
+```
+
+Rules:
+
+- Domain contains entities, value objects, enums and domain rules.
+- Application contains use cases expressed as commands and queries.
+- Infrastructure contains database, Identity, external services and technical implementations.
+- Api contains controllers, filters, middleware, authentication setup and Swagger setup.
+- Controllers call Application through MediatR and do not access Infrastructure directly.
+
+## Application Patterns
+
+The Application layer uses CQRS with MediatR:
+
+```txt
+Command  - changes state
+Query    - reads state
+Handler  - executes one command or query
+Behavior - cross-cutting MediatR pipeline logic
+```
+
+Examples:
+
+```txt
+CreateDocumentCommand
+CreateDocumentCommandHandler
+GetCitizenDocumentsQuery
+GetCitizenDocumentsQueryHandler
+ValidationBehavior
+AuthorizationBehavior
+UnhandledExceptionBehavior
+```

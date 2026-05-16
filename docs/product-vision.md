@@ -14,13 +14,13 @@ The system consists of:
 
 - a mobile application for citizens,
 - a web administration panel,
-- a backend API,
+- a backend monolith with User API and Admin API,
 - a relational database.
 
 The mobile application is designed for citizens who want quick access to their digital documents.  
 The web application is designed for administrators who manage users, documents, document types, statuses and system data.
 
-The main goal of the project is to create one shared backend API that can be used by two different frontend applications: Angular web application and React Native mobile application.
+The main goal of the project is to create one backend monolith with internal Clean Architecture. The monolith exposes User API for citizen-facing clients and Admin API for the administration panel.
 
 ---
 
@@ -36,7 +36,7 @@ The problem solved by Mobywatel is the lack of one simple digital place where:
 - citizens can check document details and statuses,
 - administrators can manage users and documents,
 - system activity can be tracked,
-- data can be accessed through a consistent API.
+- data can be accessed through consistent User API and Admin API contracts.
 
 ---
 
@@ -100,8 +100,8 @@ The main goals of the product are:
 
 1. Provide citizens with easy access to their digital documents.
 2. Provide administrators with a web panel for managing users and documents.
-3. Build one backend API shared by mobile and web applications.
-4. Use a clean and maintainable backend architecture.
+3. Build one backend monolith with separate User API and Admin API surfaces.
+4. Use internal Clean Architecture with CQRS + MediatR in the Application layer.
 5. Store data in a relational database.
 6. Use Docker to simplify local development and project startup.
 7. Separate user-facing mobile functionality from administrative web functionality.
@@ -131,7 +131,8 @@ For administrators, the value is:
 
 For the development team, the value is:
 
-- one shared backend API,
+- one backend monolith,
+- separated User API and Admin API,
 - reusable business logic,
 - clean separation between backend and frontend,
 - clear project structure,
@@ -176,10 +177,12 @@ The first version of the system should include the following core features:
 
 
 
-### Backend API
+### Backend Monolith
 
 - authentication,
 - authorization,
+- User API,
+- Admin API,
 - user management,
 - document management,
 - document type management,
@@ -212,10 +215,11 @@ These elements may be considered in a future version only as conceptual extensio
 
 The project can be considered successful when:
 
-- the backend API works and exposes documented endpoints,
+- the backend monolith works and exposes documented User API and Admin API endpoints,
 - the database runs in Docker,
-- the Angular web panel communicates with the API,
-- the React Native mobile app communicates with the API,
+- the Angular admin web panel communicates with the Admin API,
+- the Angular citizen web application communicates with the User API,
+- the React Native mobile app communicates with the User API,
 - a citizen can log in and view documents,
 - an admin can manage users and documents,
 - document statuses can be changed,
@@ -231,7 +235,7 @@ For citizens who need quick access to their personal documents, Mobywatel is a d
 
 For administrators, Mobywatel provides a web panel for managing users, documents and system data.
 
-Unlike a single frontend application, Mobywatel uses one shared backend API and two dedicated frontend applications, which makes the system easier to extend, maintain and present across different platforms.
+Unlike a single frontend application, Mobywatel uses one backend monolith with two API surfaces: User API for citizen clients and Admin API for administration. This keeps deployment simple while separating user-facing and administrative workflows.
 
 ---
 

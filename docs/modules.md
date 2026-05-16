@@ -4,6 +4,15 @@ This document describes the main modules of the Mobywatel application.
 
 The system is divided into backend modules, web frontend modules and mobile frontend modules. Each module has a clear responsibility and should be developed as an independent part of the application as much as possible.
 
+The backend is a single deployable monolith with internal Clean Architecture. It exposes two logical API surfaces:
+
+```txt
+User API   - used by CitizenMobile and CitizenWeb
+Admin API  - used by AdminWeb
+```
+
+Application use cases are implemented with CQRS + MediatR.
+
 ---
 
 ## 1. Module Overview
@@ -33,12 +42,13 @@ Citizen Web Application
 Admin Web Panel
 ```
 
-All client applications communicate with one shared backend API.
+Client applications communicate with the same backend monolith through different API surfaces.
 
 ```txt
 CitizenMobile  ─┐
-CitizenWeb     ├──>  Backend API  ───>  Database
-AdminWeb       ┘
+CitizenWeb     ├──>  User API  ─┐
+                               ├──> Backend Monolith ───> Database
+AdminWeb       ─────>  Admin API ┘
 ```
 
 ---
@@ -60,6 +70,8 @@ Each backend module can contain:
 - domain entities,
 - commands,
 - queries,
+- MediatR handlers,
+- MediatR pipeline behaviors,
 - DTOs,
 - validators,
 - repository interfaces,
@@ -98,7 +110,8 @@ The module is responsible for:
 ```txt
 Mobywatel.Application/Auth/
 Mobywatel.Infrastructure/Authentication/
-Mobywatel.Api/Controllers/AuthController.cs
+Mobywatel.Api/Controllers/UserApi/AuthController.cs
+Mobywatel.Api/Controllers/AdminApi/AuthController.cs
 ```
 
 ---
@@ -148,10 +161,15 @@ RefreshToken
 ## 3.5 API Endpoints
 
 ```txt
-POST /api/auth/login
-POST /api/auth/refresh-token
-POST /api/auth/logout
-GET  /api/auth/me
+POST /api/user/auth/login
+POST /api/user/auth/refresh-token
+POST /api/user/auth/logout
+GET  /api/user/auth/me
+
+POST /api/admin/auth/login
+POST /api/admin/auth/refresh-token
+POST /api/admin/auth/logout
+GET  /api/admin/auth/me
 ```
 
 ---
@@ -215,7 +233,8 @@ The module is responsible for:
 
 ```txt
 Mobywatel.Application/Common/Security/
-Mobywatel.Api/Controllers/
+Mobywatel.Api/Controllers/UserApi/
+Mobywatel.Api/Controllers/AdminApi/
 Mobywatel.Api/Filters/
 Mobywatel.Api/Middlewares/
 ```
@@ -302,7 +321,7 @@ The module is responsible for:
 Mobywatel.Domain/Entities/User.cs
 Mobywatel.Application/Users/
 Mobywatel.Infrastructure/Repositories/UserRepository.cs
-Mobywatel.Api/Controllers/AdminController.cs
+Mobywatel.Api/Controllers/AdminApi/DashboardController.cs
 ```
 
 If the project does not have a separate `Users` folder in `Mobywatel.Application`, user use cases can be placed inside:
@@ -416,7 +435,8 @@ The module is responsible for:
 ```txt
 Mobywatel.Domain/Entities/Citizen.cs
 Mobywatel.Application/Citizens/
-Mobywatel.Api/Controllers/CitizensController.cs
+Mobywatel.Api/Controllers/UserApi/ProfileController.cs
+Mobywatel.Api/Controllers/AdminApi/UsersController.cs
 ```
 
 ---
@@ -462,11 +482,11 @@ ActivityLog
 ## 6.5 API Endpoints
 
 ```txt
-GET /api/citizens/me
-GET /api/citizens/me/documents
-GET /api/citizens/me/activity-logs
-GET /api/citizens/{id}
-PUT /api/citizens/{id}
+GET /api/user/profile
+GET /api/user/documents
+GET /api/user/activity-logs
+GET /api/admin/users/{id}
+PUT /api/admin/users/{id}
 ```
 
 ---
@@ -521,7 +541,7 @@ The module is responsible for:
 ```txt
 Mobywatel.Domain/Entities/Admin.cs
 Mobywatel.Application/Admins/
-Mobywatel.Api/Controllers/AdminController.cs
+Mobywatel.Api/Controllers/AdminApi/UsersController.cs
 ```
 
 If the project does not have a separate `Admins` folder in the Application layer, admin management can be placed inside:
@@ -575,10 +595,10 @@ User
 ## 7.5 API Endpoints
 
 ```txt
-GET   /api/super-admin/admins
-POST  /api/super-admin/admins
-PUT   /api/super-admin/admins/{id}
-PATCH /api/super-admin/admins/{id}/status
+GET   /api/admin/admins
+POST  /api/admin/admins
+PUT   /api/admin/admins/{id}
+PATCH /api/admin/admins/{id}/status
 ```
 
 ---
@@ -636,7 +656,8 @@ The module is responsible for:
 Mobywatel.Domain/Entities/Document.cs
 Mobywatel.Application/Documents/
 Mobywatel.Infrastructure/Repositories/DocumentRepository.cs
-Mobywatel.Api/Controllers/DocumentsController.cs
+Mobywatel.Api/Controllers/UserApi/DocumentsController.cs
+Mobywatel.Api/Controllers/AdminApi/DocumentsController.cs
 ```
 
 ---
@@ -685,13 +706,14 @@ DocumentStatus
 ## 8.5 API Endpoints
 
 ```txt
-GET    /api/citizens/me/documents
-GET    /api/documents
-GET    /api/documents/{id}
-POST   /api/documents
-PUT    /api/documents/{id}
-PATCH  /api/documents/{id}/status
-DELETE /api/documents/{id}
+GET    /api/user/documents
+GET    /api/user/documents/{id}
+GET    /api/admin/documents
+GET    /api/admin/documents/{id}
+POST   /api/admin/documents
+PUT    /api/admin/documents/{id}
+PATCH  /api/admin/documents/{id}/status
+DELETE /api/admin/documents/{id}
 ```
 
 ---
@@ -763,7 +785,7 @@ The module is responsible for:
 Mobywatel.Domain/Entities/DocumentType.cs
 Mobywatel.Application/DocumentTypes/
 Mobywatel.Infrastructure/Persistence/Configurations/DocumentTypeConfiguration.cs
-Mobywatel.Api/Controllers/DocumentTypesController.cs
+Mobywatel.Api/Controllers/AdminApi/DocumentTypesController.cs
 ```
 
 ---
@@ -808,11 +830,11 @@ Document
 ## 9.5 API Endpoints
 
 ```txt
-GET   /api/document-types
-GET   /api/document-types/{id}
-POST  /api/document-types
-PUT   /api/document-types/{id}
-PATCH /api/document-types/{id}/status
+GET   /api/admin/document-types
+GET   /api/admin/document-types/{id}
+POST  /api/admin/document-types
+PUT   /api/admin/document-types/{id}
+PATCH /api/admin/document-types/{id}/status
 ```
 
 ---
@@ -920,7 +942,7 @@ DocumentStatusType
 ## 10.7 API Endpoints
 
 ```txt
-PATCH /api/documents/{id}/status
+PATCH /api/admin/documents/{id}/status
 ```
 
 ---
@@ -973,7 +995,7 @@ The module is responsible for:
 ```txt
 Mobywatel.Infrastructure/Services/QrCodeService.cs
 Mobywatel.Application/Documents/Queries/GetDocumentQrCode/
-Mobywatel.Api/Controllers/DocumentsController.cs
+Mobywatel.Api/Controllers/UserApi/DocumentsController.cs
 ```
 
 ---
@@ -1010,7 +1032,7 @@ Citizen
 ## 11.5 API Endpoints
 
 ```txt
-GET /api/documents/{id}/qr-code
+GET /api/user/documents/{id}/qr-code
 ```
 
 ---
@@ -1069,7 +1091,8 @@ The module is responsible for:
 Mobywatel.Domain/Entities/ActivityLog.cs
 Mobywatel.Application/ActivityLogs/
 Mobywatel.Infrastructure/Repositories/ActivityLogRepository.cs
-Mobywatel.Api/Controllers/ActivityLogsController.cs
+Mobywatel.Api/Controllers/UserApi/ActivityLogsController.cs
+Mobywatel.Api/Controllers/AdminApi/ActivityLogsController.cs
 ```
 
 ---
@@ -1129,9 +1152,9 @@ AdminUpdated
 ## 12.6 API Endpoints
 
 ```txt
-GET /api/citizens/me/activity-logs
-GET /api/activity-logs
-GET /api/activity-logs/{id}
+GET /api/user/activity-logs
+GET /api/admin/activity-logs
+GET /api/admin/activity-logs/{id}
 ```
 
 ---
@@ -1190,7 +1213,7 @@ The module is responsible for returning:
 
 ```txt
 Mobywatel.Application/Dashboard/
-Mobywatel.Api/Controllers/AdminController.cs
+Mobywatel.Api/Controllers/AdminApi/AdminsController.cs
 ```
 
 If the project does not have a separate `Dashboard` folder, dashboard queries can be placed inside:
@@ -1251,7 +1274,7 @@ Citizen Module
 - Citizen cannot access admin dashboard.
 - Dashboard returns basic statistics.
 - Dashboard returns recent activity.
-- Data is loaded from backend API.
+- Data is loaded from Admin API.
 
 ---
 
@@ -1789,7 +1812,8 @@ The MVP module implementation is complete when:
 - document statuses can be updated,
 - activity logs are created and displayed,
 - admin dashboard shows basic statistics,
-- all frontend applications communicate with the backend API,
-- backend code follows Clean Architecture,
+- CitizenMobile and CitizenWeb communicate with the User API,
+- AdminWeb communicates with the Admin API,
+- backend code is a monolith with internal Clean Architecture,
+- application use cases use CQRS + MediatR,
 - modules are separated by responsibility.
-```

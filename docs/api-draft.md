@@ -2,41 +2,65 @@
 
 This document describes the initial REST API draft for the Mobywatel MVP.
 
-The API is shared by Citizen Mobile Application, Citizen Web Application and Admin Web Panel. All clients communicate with one backend API.
+The backend is one deployable monolith. It exposes two logical REST API surfaces:
+
+```txt
+User API   - used by Citizen Mobile Application and Citizen Web Application
+Admin API  - used by Admin Web Panel
+```
+
+Both API surfaces use the same internal Clean Architecture, Application layer, Domain layer, Infrastructure layer and database. Application use cases are implemented with CQRS + MediatR.
 
 ```txt
 CitizenMobile  ─┐
-CitizenWeb     ├──>  Backend API  ───>  PostgreSQL Database
-AdminWeb       ┘
+CitizenWeb     ├──>  User API  ─┐
+                               ├──> Backend Monolith ───> PostgreSQL Database
+AdminWeb       ─────>  Admin API ┘
 ```
 
 ## 1. API Overview
 
-Base URL for local development:
+User API base URL for local development:
 
 ```txt
-https://localhost:5001/api
+https://localhost:5001/api/user
 ```
 
-Alternative Docker/internal URL:
+Admin API base URL for local development:
 
 ```txt
-http://backend-api:8080/api
+https://localhost:5001/api/admin
 ```
 
-The backend exposes a REST API.
+Alternative Docker/internal URLs:
+
+```txt
+http://backend-api:8080/api/user
+http://backend-api:8080/api/admin
+```
+
+The backend exposes REST APIs from one monolith.
 
 Main endpoint groups:
 
 ```txt
-/api/auth
-/api/citizens
-/api/admin
-/api/super-admin
-/api/documents
-/api/document-types
-/api/activity-logs
+User API
+  /api/user/auth
+  /api/user/profile
+  /api/user/documents
+  /api/user/activity-logs
+
+Admin API
+  /api/admin/auth
+  /api/admin/dashboard
+  /api/admin/users
+  /api/admin/admins
+  /api/admin/documents
+  /api/admin/document-types
+  /api/admin/activity-logs
 ```
+
+Endpoint paths should use the `/api/user/*` prefix for citizen-facing operations and the `/api/admin/*` prefix for administration operations.
 
 All API responses should use a consistent response format.
 
@@ -115,15 +139,18 @@ The API should use standard HTTP status codes.
 Base path:
 
 ```txt
-/api/auth
+/api/user/auth
+/api/admin/auth
 ```
+
+The examples below show the User API path. Admin authentication uses the same endpoint names under `/api/admin/auth`.
 
 ### 4.1 Login
 
 Endpoint:
 
 ```txt
-POST /api/auth/login
+POST /api/user/auth/login
 ```
 
 Access:
@@ -134,7 +161,7 @@ Public
 
 Description:
 
-Authenticates a user using email and password. This endpoint is used by CitizenMobile, CitizenWeb and AdminWeb.
+Authenticates a user using email and password. CitizenMobile and CitizenWeb use `/api/user/auth/login`. AdminWeb uses `/api/admin/auth/login`.
 
 Request:
 
@@ -180,7 +207,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-POST /api/auth/refresh-token
+POST /api/user/auth/refresh-token
 ```
 
 Access:
@@ -228,7 +255,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-POST /api/auth/logout
+POST /api/user/auth/logout
 ```
 
 Access:
@@ -267,7 +294,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-GET /api/auth/me
+GET /api/user/auth/me
 ```
 
 Access:
@@ -304,12 +331,13 @@ Possible error responses:
 401 Unauthorized
 ```
 
-## 5. Citizens API
+## 5. User Profile API
 
 Base path:
 
 ```txt
-/api/citizens
+/api/user
+/api/admin/users
 ```
 
 ### 5.1 Get Current Citizen Profile
@@ -317,7 +345,7 @@ Base path:
 Endpoint:
 
 ```txt
-GET /api/citizens/me
+GET /api/user/profile
 ```
 
 Access:
@@ -368,7 +396,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-GET /api/citizens/me/documents
+GET /api/user/documents
 ```
 
 Access:
@@ -417,7 +445,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-GET /api/citizens/me/activity-logs
+GET /api/user/activity-logs
 ```
 
 Access:
@@ -473,7 +501,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-GET /api/citizens/{id}
+GET /api/admin/users/{id}
 ```
 
 Access:
@@ -527,7 +555,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-PUT /api/citizens/{id}
+PUT /api/admin/users/{id}
 ```
 
 Access:
@@ -937,12 +965,12 @@ Possible error responses:
 404 Not Found
 ```
 
-## 7. SuperAdmin API
+## 7. Admin Management API
 
 Base path:
 
 ```txt
-/api/super-admin
+/api/admin/admins
 ```
 
 ### 7.1 Get Admins
@@ -950,7 +978,7 @@ Base path:
 Endpoint:
 
 ```txt
-GET /api/super-admin/admins
+GET /api/admin/admins
 ```
 
 Access:
@@ -1011,7 +1039,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-POST /api/super-admin/admins
+POST /api/admin/admins
 ```
 
 Access:
@@ -1070,7 +1098,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-PUT /api/super-admin/admins/{id}
+PUT /api/admin/admins/{id}
 ```
 
 Access:
@@ -1124,7 +1152,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-PATCH /api/super-admin/admins/{id}/status
+PATCH /api/admin/admins/{id}/status
 ```
 
 Access:
@@ -1173,7 +1201,7 @@ Possible error responses:
 Base path:
 
 ```txt
-/api/documents
+/api/admin/documents
 ```
 
 ### 8.1 Get Documents
@@ -1181,7 +1209,7 @@ Base path:
 Endpoint:
 
 ```txt
-GET /api/documents
+GET /api/admin/documents
 ```
 
 Access:
@@ -1249,7 +1277,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-GET /api/documents/{id}
+GET /api/admin/documents/{id}
 ```
 
 Access:
@@ -1314,7 +1342,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-POST /api/documents
+POST /api/admin/documents
 ```
 
 Access:
@@ -1375,7 +1403,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-PUT /api/documents/{id}
+PUT /api/admin/documents/{id}
 ```
 
 Access:
@@ -1435,7 +1463,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-PATCH /api/documents/{id}/status
+PATCH /api/admin/documents/{id}/status
 ```
 
 Access:
@@ -1496,7 +1524,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-DELETE /api/documents/{id}
+DELETE /api/admin/documents/{id}
 ```
 
 Access:
@@ -1529,7 +1557,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-GET /api/documents/{id}/qr-code
+GET /api/user/documents/{id}/qr-code
 ```
 
 Access:
@@ -1580,7 +1608,7 @@ Possible error responses:
 Base path:
 
 ```txt
-/api/document-types
+/api/admin/document-types
 ```
 
 ### 9.1 Get Document Types
@@ -1588,7 +1616,7 @@ Base path:
 Endpoint:
 
 ```txt
-GET /api/document-types
+GET /api/admin/document-types
 ```
 
 Access:
@@ -1639,7 +1667,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-GET /api/document-types/{id}
+GET /api/admin/document-types/{id}
 ```
 
 Access:
@@ -1685,7 +1713,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-POST /api/document-types
+POST /api/admin/document-types
 ```
 
 Access:
@@ -1739,7 +1767,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-PUT /api/document-types/{id}
+PUT /api/admin/document-types/{id}
 ```
 
 Access:
@@ -1793,7 +1821,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-PATCH /api/document-types/{id}/status
+PATCH /api/admin/document-types/{id}/status
 ```
 
 Access:
@@ -1842,7 +1870,7 @@ Possible error responses:
 Base path:
 
 ```txt
-/api/activity-logs
+/api/admin/activity-logs
 ```
 
 ### 10.1 Get Activity Logs
@@ -1850,7 +1878,7 @@ Base path:
 Endpoint:
 
 ```txt
-GET /api/activity-logs
+GET /api/admin/activity-logs
 ```
 
 Access:
@@ -1913,7 +1941,7 @@ Possible error responses:
 Endpoint:
 
 ```txt
-GET /api/activity-logs/{id}
+GET /api/admin/activity-logs/{id}
 ```
 
 Access:
@@ -2155,53 +2183,53 @@ Description is optional.
 
 | Endpoint | Citizen | Admin | SuperAdmin |
 |---|---:|---:|---:|
-| `POST /api/auth/login` | Yes | Yes | Yes |
-| `POST /api/auth/refresh-token` | Yes | Yes | Yes |
-| `POST /api/auth/logout` | Yes | Yes | Yes |
-| `GET /api/auth/me` | Yes | Yes | Yes |
-| `GET /api/citizens/me` | Yes | No | No |
-| `GET /api/citizens/me/documents` | Yes | No | No |
-| `GET /api/citizens/me/activity-logs` | Yes | No | No |
-| `GET /api/citizens/{id}` | No | Yes | Yes |
-| `PUT /api/citizens/{id}` | No | Yes | Yes |
+| `POST /api/user/auth/login` | Yes | Yes | Yes |
+| `POST /api/user/auth/refresh-token` | Yes | Yes | Yes |
+| `POST /api/user/auth/logout` | Yes | Yes | Yes |
+| `GET /api/user/auth/me` | Yes | Yes | Yes |
+| `GET /api/user/profile` | Yes | No | No |
+| `GET /api/user/documents` | Yes | No | No |
+| `GET /api/user/activity-logs` | Yes | No | No |
+| `GET /api/admin/users/{id}` | No | Yes | Yes |
+| `PUT /api/admin/users/{id}` | No | Yes | Yes |
 | `GET /api/admin/dashboard` | No | Yes | Yes |
 | `GET /api/admin/users` | No | Yes | Yes |
 | `GET /api/admin/users/{id}` | No | Yes | Yes |
 | `POST /api/admin/users` | No | Yes | Yes |
 | `PUT /api/admin/users/{id}` | No | Yes | Yes |
 | `PATCH /api/admin/users/{id}/status` | No | Yes | Yes |
-| `GET /api/super-admin/admins` | No | No | Yes |
-| `POST /api/super-admin/admins` | No | No | Yes |
-| `PUT /api/super-admin/admins/{id}` | No | No | Yes |
-| `PATCH /api/super-admin/admins/{id}/status` | No | No | Yes |
-| `GET /api/documents` | No | Yes | Yes |
-| `GET /api/documents/{id}` | Own only | Yes | Yes |
-| `POST /api/documents` | No | Yes | Yes |
-| `PUT /api/documents/{id}` | No | Yes | Yes |
-| `PATCH /api/documents/{id}/status` | No | Yes | Yes |
-| `DELETE /api/documents/{id}` | No | Yes | Yes |
-| `GET /api/documents/{id}/qr-code` | Own only | Yes | Yes |
-| `GET /api/document-types` | No | Yes | Yes |
-| `GET /api/document-types/{id}` | No | Yes | Yes |
-| `POST /api/document-types` | No | No | Yes |
-| `PUT /api/document-types/{id}` | No | No | Yes |
-| `PATCH /api/document-types/{id}/status` | No | No | Yes |
-| `GET /api/activity-logs` | No | Yes | Yes |
-| `GET /api/activity-logs/{id}` | No | Yes | Yes |
+| `GET /api/admin/admins` | No | No | Yes |
+| `POST /api/admin/admins` | No | No | Yes |
+| `PUT /api/admin/admins/{id}` | No | No | Yes |
+| `PATCH /api/admin/admins/{id}/status` | No | No | Yes |
+| `GET /api/admin/documents` | No | Yes | Yes |
+| `GET /api/admin/documents/{id}` | Own only | Yes | Yes |
+| `POST /api/admin/documents` | No | Yes | Yes |
+| `PUT /api/admin/documents/{id}` | No | Yes | Yes |
+| `PATCH /api/admin/documents/{id}/status` | No | Yes | Yes |
+| `DELETE /api/admin/documents/{id}` | No | Yes | Yes |
+| `GET /api/user/documents/{id}/qr-code` | Own only | Yes | Yes |
+| `GET /api/admin/document-types` | No | Yes | Yes |
+| `GET /api/admin/document-types/{id}` | No | Yes | Yes |
+| `POST /api/admin/document-types` | No | No | Yes |
+| `PUT /api/admin/document-types/{id}` | No | No | Yes |
+| `PATCH /api/admin/document-types/{id}/status` | No | No | Yes |
+| `GET /api/admin/activity-logs` | No | Yes | Yes |
+| `GET /api/admin/activity-logs/{id}` | No | Yes | Yes |
 
 ## 15. MVP Endpoint Summary
 
 ```txt
-POST   /api/auth/login
-POST   /api/auth/refresh-token
-POST   /api/auth/logout
-GET    /api/auth/me
+POST   /api/user/auth/login
+POST   /api/user/auth/refresh-token
+POST   /api/user/auth/logout
+GET    /api/user/auth/me
 
-GET    /api/citizens/me
-GET    /api/citizens/me/documents
-GET    /api/citizens/me/activity-logs
-GET    /api/citizens/{id}
-PUT    /api/citizens/{id}
+GET    /api/user/profile
+GET    /api/user/documents
+GET    /api/user/activity-logs
+GET    /api/admin/users/{id}
+PUT    /api/admin/users/{id}
 
 GET    /api/admin/dashboard
 GET    /api/admin/users
@@ -2210,27 +2238,27 @@ POST   /api/admin/users
 PUT    /api/admin/users/{id}
 PATCH  /api/admin/users/{id}/status
 
-GET    /api/super-admin/admins
-POST   /api/super-admin/admins
-PUT    /api/super-admin/admins/{id}
-PATCH  /api/super-admin/admins/{id}/status
+GET    /api/admin/admins
+POST   /api/admin/admins
+PUT    /api/admin/admins/{id}
+PATCH  /api/admin/admins/{id}/status
 
-GET    /api/documents
-GET    /api/documents/{id}
-POST   /api/documents
-PUT    /api/documents/{id}
-PATCH  /api/documents/{id}/status
-DELETE /api/documents/{id}
-GET    /api/documents/{id}/qr-code
+GET    /api/admin/documents
+GET    /api/admin/documents/{id}
+POST   /api/admin/documents
+PUT    /api/admin/documents/{id}
+PATCH  /api/admin/documents/{id}/status
+DELETE /api/admin/documents/{id}
+GET    /api/user/documents/{id}/qr-code
 
-GET    /api/document-types
-GET    /api/document-types/{id}
-POST   /api/document-types
-PUT    /api/document-types/{id}
-PATCH  /api/document-types/{id}/status
+GET    /api/admin/document-types
+GET    /api/admin/document-types/{id}
+POST   /api/admin/document-types
+PUT    /api/admin/document-types/{id}
+PATCH  /api/admin/document-types/{id}/status
 
-GET    /api/activity-logs
-GET    /api/activity-logs/{id}
+GET    /api/admin/activity-logs
+GET    /api/admin/activity-logs/{id}
 ```
 
 ## 16. Open Questions
@@ -2249,7 +2277,7 @@ Should document numbers be globally unique or unique per document type?
 
 ## 17. Final API Summary
 
-The Mobywatel MVP API provides one shared backend for Citizen Mobile Application, Citizen Web Application and Admin Web Panel.
+The Mobywatel MVP backend is one monolith with two logical API surfaces: User API for Citizen Mobile Application and Citizen Web Application, and Admin API for Admin Web Panel.
 
 The API supports authentication, authorization, citizen profile, citizen documents, QR code preview, activity history, admin dashboard, user management, admin management, document management, document type management and activity logs.
 
@@ -2259,4 +2287,4 @@ The most important API rule is:
 Security and business logic must always be enforced by the backend.
 ```
 
-Frontend and mobile applications may hide unavailable actions in the UI, but the backend must always verify role permissions and ownership rules.
+Frontend and mobile applications may hide unavailable actions in the UI, but the backend must always verify role permissions and ownership rules in controllers, policies and MediatR application handlers.

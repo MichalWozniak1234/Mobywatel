@@ -2,7 +2,7 @@
 
 This document describes the MVP scope for the Mobywatel application.
 
-The goal of the MVP is to build the first working version of the system that demonstrates the main product idea: citizens can access their digital documents, and administrators can manage users, documents and document statuses through one shared backend API.
+The goal of the MVP is to build the first working version of the system that demonstrates the main product idea: citizens can access their digital documents, and administrators can manage users, documents and document statuses through one backend monolith with separate User API and Admin API surfaces.
 
 ---
 
@@ -12,7 +12,9 @@ The MVP version of Mobywatel should prove that the system can work as a simple d
 
 The MVP must include:
 
-- one backend API,
+- one backend monolith,
+- User API for citizen-facing clients,
+- Admin API for administration clients,
 - relational database,
 - citizen mobile application,
 - citizen web application,
@@ -105,13 +107,14 @@ Database
 Docker
 ```
 
-### 3.1 Backend API
+### 3.1 Backend Monolith
 
-The backend API is the central part of the system.
+The backend monolith is the central part of the system. It is deployed as one ASP.NET Core application and exposes two logical REST API surfaces.
 
 Responsibilities:
 
-- expose REST endpoints,
+- expose User API endpoints,
+- expose Admin API endpoints,
 - authenticate users,
 - authorize users by role,
 - manage users,
@@ -122,7 +125,7 @@ Responsibilities:
 - return data to mobile and web applications,
 - expose Swagger/OpenAPI documentation.
 
-The API is shared by all frontend clients.
+CitizenMobile and CitizenWeb use the User API. AdminWeb uses the Admin API. Both API surfaces use the same Application, Domain, Infrastructure and database.
 
 ### 3.2 Database
 
@@ -139,7 +142,7 @@ The database stores:
 - refresh tokens,
 - activity logs.
 
-The database is accessed only by the backend API.
+The database is accessed only by the backend monolith.
 
 ### 3.3 Citizen Mobile Application
 
@@ -174,7 +177,7 @@ Document Details
 Activity History
 ```
 
-The citizen web application uses the same backend API as the mobile app.
+The citizen web application uses the same User API as the mobile app.
 
 ### 3.5 Admin Web Panel
 
@@ -223,10 +226,15 @@ Role-based authorization
 Required endpoints:
 
 ```txt
-POST /api/auth/login
-POST /api/auth/refresh-token
-POST /api/auth/logout
-GET  /api/auth/me
+POST /api/user/auth/login
+POST /api/user/auth/refresh-token
+POST /api/user/auth/logout
+GET  /api/user/auth/me
+
+POST /api/admin/auth/login
+POST /api/admin/auth/refresh-token
+POST /api/admin/auth/logout
+GET  /api/admin/auth/me
 ```
 
 Acceptance criteria:
@@ -256,9 +264,9 @@ View address data
 Required endpoints:
 
 ```txt
-GET /api/citizens/me
-GET /api/citizens/{id}
-PUT /api/citizens/{id}
+GET /api/user/profile
+GET /api/admin/users/{id}
+PUT /api/admin/users/{id}
 ```
 
 Acceptance criteria:
@@ -322,10 +330,10 @@ Activate or deactivate admin account
 Required endpoints:
 
 ```txt
-GET   /api/super-admin/admins
-POST  /api/super-admin/admins
-PUT   /api/super-admin/admins/{id}
-PATCH /api/super-admin/admins/{id}/status
+GET   /api/admin/admins
+POST  /api/admin/admins
+PUT   /api/admin/admins/{id}
+PATCH /api/admin/admins/{id}/status
 ```
 
 Acceptance criteria:
@@ -359,13 +367,14 @@ Delete document
 Required endpoints:
 
 ```txt
-GET    /api/citizens/me/documents
-GET    /api/documents
-GET    /api/documents/{id}
-POST   /api/documents
-PUT    /api/documents/{id}
-PATCH  /api/documents/{id}/status
-DELETE /api/documents/{id}
+GET    /api/user/documents
+GET    /api/user/documents/{id}
+GET    /api/admin/documents
+GET    /api/admin/documents/{id}
+POST   /api/admin/documents
+PUT    /api/admin/documents/{id}
+PATCH  /api/admin/documents/{id}/status
+DELETE /api/admin/documents/{id}
 ```
 
 Acceptance criteria:
@@ -408,11 +417,11 @@ Residence Card
 Required endpoints:
 
 ```txt
-GET   /api/document-types
-GET   /api/document-types/{id}
-POST  /api/document-types
-PUT   /api/document-types/{id}
-PATCH /api/document-types/{id}/status
+GET   /api/admin/document-types
+GET   /api/admin/document-types/{id}
+POST  /api/admin/document-types
+PUT   /api/admin/document-types/{id}
+PATCH /api/admin/document-types/{id}/status
 ```
 
 Acceptance criteria:
@@ -453,7 +462,7 @@ Rejected - document was rejected by administrator
 Required endpoint:
 
 ```txt
-PATCH /api/documents/{id}/status
+PATCH /api/admin/documents/{id}/status
 ```
 
 Acceptance criteria:
@@ -481,7 +490,7 @@ Display QR code in citizen web app
 Required endpoints:
 
 ```txt
-GET /api/documents/{id}/qr-code
+GET /api/user/documents/{id}/qr-code
 ```
 
 Acceptance criteria:
@@ -514,9 +523,9 @@ Display admin activity logs
 Required endpoints:
 
 ```txt
-GET /api/citizens/me/activity-logs
-GET /api/activity-logs
-GET /api/activity-logs/{id}
+GET /api/user/activity-logs
+GET /api/admin/activity-logs
+GET /api/admin/activity-logs/{id}
 ```
 
 Example activity types:
@@ -570,7 +579,7 @@ Acceptance criteria:
 - Admin can open dashboard after login.
 - Dashboard displays basic statistics.
 - Dashboard displays recent activity.
-- Data is loaded from backend API.
+- Data is loaded from Admin API.
 - Citizen cannot access dashboard endpoint.
 
 ---
@@ -608,7 +617,7 @@ Mobile user flow:
 
 Acceptance criteria:
 
-- Mobile app connects to backend API.
+- Mobile app connects to User API.
 - Citizen can log in.
 - Citizen can view own profile.
 - Citizen can view own documents.
@@ -637,7 +646,7 @@ Activity History
 
 Acceptance criteria:
 
-- Citizen web app connects to backend API.
+- Citizen web app connects to User API.
 - Citizen can log in.
 - Citizen can view dashboard.
 - Citizen can view own profile.
@@ -920,35 +929,47 @@ citizen@mobywatel.local
 
 ## 9. MVP API Scope
 
-The MVP API should expose the following endpoint groups:
+The MVP backend should expose two logical API surfaces.
 
 ```txt
-/api/auth
-/api/citizens
-/api/admin
-/api/super-admin
-/api/documents
-/api/document-types
-/api/activity-logs
+User API
+  /api/user/auth
+  /api/user/profile
+  /api/user/documents
+  /api/user/activity-logs
+
+Admin API
+  /api/admin/auth
+  /api/admin/dashboard
+  /api/admin/users
+  /api/admin/admins
+  /api/admin/documents
+  /api/admin/document-types
+  /api/admin/activity-logs
 ```
 
 ### 9.1 Auth Endpoints
 
 ```txt
-POST /api/auth/login
-POST /api/auth/refresh-token
-POST /api/auth/logout
-GET  /api/auth/me
+POST /api/user/auth/login
+POST /api/user/auth/refresh-token
+POST /api/user/auth/logout
+GET  /api/user/auth/me
+
+POST /api/admin/auth/login
+POST /api/admin/auth/refresh-token
+POST /api/admin/auth/logout
+GET  /api/admin/auth/me
 ```
 
 ### 9.2 Citizen Endpoints
 
 ```txt
-GET /api/citizens/me
-GET /api/citizens/me/documents
-GET /api/citizens/me/activity-logs
-GET /api/citizens/{id}
-PUT /api/citizens/{id}
+GET /api/user/profile
+GET /api/user/documents
+GET /api/user/documents/{id}
+GET /api/user/documents/{id}/qr-code
+GET /api/user/activity-logs
 ```
 
 ### 9.3 Admin Endpoints
@@ -965,39 +986,38 @@ PATCH /api/admin/users/{id}/status
 ### 9.4 SuperAdmin Endpoints
 
 ```txt
-GET   /api/super-admin/admins
-POST  /api/super-admin/admins
-PUT   /api/super-admin/admins/{id}
-PATCH /api/super-admin/admins/{id}/status
+GET   /api/admin/admins
+POST  /api/admin/admins
+PUT   /api/admin/admins/{id}
+PATCH /api/admin/admins/{id}/status
 ```
 
 ### 9.5 Document Endpoints
 
 ```txt
-GET    /api/documents
-GET    /api/documents/{id}
-POST   /api/documents
-PUT    /api/documents/{id}
-PATCH  /api/documents/{id}/status
-DELETE /api/documents/{id}
-GET    /api/documents/{id}/qr-code
+GET    /api/admin/documents
+GET    /api/admin/documents/{id}
+POST   /api/admin/documents
+PUT    /api/admin/documents/{id}
+PATCH  /api/admin/documents/{id}/status
+DELETE /api/admin/documents/{id}
 ```
 
 ### 9.6 Document Type Endpoints
 
 ```txt
-GET   /api/document-types
-GET   /api/document-types/{id}
-POST  /api/document-types
-PUT   /api/document-types/{id}
-PATCH /api/document-types/{id}/status
+GET   /api/admin/document-types
+GET   /api/admin/document-types/{id}
+POST  /api/admin/document-types
+PUT   /api/admin/document-types/{id}
+PATCH /api/admin/document-types/{id}/status
 ```
 
 ### 9.7 Activity Log Endpoints
 
 ```txt
-GET /api/activity-logs
-GET /api/activity-logs/{id}
+GET /api/admin/activity-logs
+GET /api/admin/activity-logs/{id}
 ```
 
 ---
@@ -1035,7 +1055,7 @@ These features can be considered in future versions.
 
 ### 11.1 Architecture
 
-The backend should follow Clean Architecture.
+The backend should be a monolith with internal Clean Architecture.
 
 Required backend layers:
 
@@ -1051,8 +1071,9 @@ Acceptance criteria:
 
 - Domain layer does not depend on other layers.
 - Application layer contains use cases.
+- Application layer uses CQRS + MediatR.
 - Infrastructure layer contains database and technical implementations.
-- API layer exposes endpoints.
+- API layer exposes separate User API and Admin API endpoints.
 - Business logic is not placed directly inside controllers.
 
 ### 11.2 Database
@@ -1122,7 +1143,7 @@ Acceptance criteria:
 The MVP is successful when:
 
 ```txt
-Backend API runs correctly.
+Backend monolith runs correctly.
 Database runs in Docker.
 Swagger documentation is available.
 Citizen can log in.
@@ -1138,9 +1159,9 @@ Admin can manage documents.
 Admin can update document statuses.
 SuperAdmin can manage document types.
 Activity logs are saved and displayed.
-Citizen mobile app communicates with API.
-Citizen web app communicates with API.
-Admin web panel communicates with API.
+Citizen mobile app communicates with User API.
+Citizen web app communicates with User API.
+Admin web panel communicates with Admin API.
 Project can be started by another person using documentation.
 ```
 
@@ -1155,6 +1176,7 @@ The MVP should be implemented in the following order.
 ```txt
 Create solution and backend projects
 Configure Clean Architecture dependencies
+Configure CQRS and MediatR
 Create domain entities
 Configure database context
 Configure migrations
@@ -1236,7 +1258,7 @@ Write database documentation
 
 ## 14. Final MVP Summary
 
-The MVP version of Mobywatel is a working demo system with one shared backend API and three client applications.
+The MVP version of Mobywatel is a working demo system with one backend monolith, internal Clean Architecture, User API, Admin API and three client applications.
 
 The citizen can use mobile or web application to view personal documents and activity history.
 
@@ -1244,4 +1266,4 @@ The administrator can use the admin web panel to manage users, documents, docume
 
 The SuperAdmin role demonstrates extended permissions and system-level management.
 
-The MVP focuses on clean structure, working features and clear separation between citizen functionality and administration functionality.
+The MVP focuses on clean structure, working features, CQRS + MediatR use cases and clear separation between citizen functionality and administration functionality.

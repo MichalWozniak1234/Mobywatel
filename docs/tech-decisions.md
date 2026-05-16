@@ -12,7 +12,9 @@ Mobywatel is a digital citizen document application.
 
 The system consists of:
 
-- backend API,
+- backend monolith,
+- User API,
+- Admin API,
 - citizen web application,
 - admin web application,
 - citizen mobile application,
@@ -21,12 +23,13 @@ The system consists of:
 
 The main goal of the MVP is to build a working demo system where citizens can view their digital documents and administrators can manage users, documents, document types, statuses and activity logs.
 
-The system uses one shared backend API for all client applications.
+The system uses one backend monolith with two logical API surfaces.
 
 ```txt
 Citizen Mobile App  ─┐
-Citizen Web App     ├──>  Backend API  ───>  PostgreSQL Database
-Admin Web App       ┘
+Citizen Web App     ├──>  User API  ─┐
+                                      ├──> Backend Monolith ───> PostgreSQL Database
+Admin Web App       ─────>  Admin API ┘
 ```
 
 ---
@@ -42,6 +45,7 @@ The backend will be implemented using:
 C#
 ASP.NET Core Web API
 Entity Framework Core
+MediatR
 JWT Authentication
 Swagger / OpenAPI
 ```
@@ -110,7 +114,7 @@ Docker Compose will be used mainly to start the PostgreSQL database and, if need
 
 ## Decision
 
-The backend API will be implemented using .NET and C#.
+The backend monolith will be implemented using .NET and C#.
 
 ## Reason
 
@@ -138,29 +142,65 @@ Negative consequences:
 
 ---
 
-# 4. Decision: ASP.NET Core Web API
+# 4. Decision: Backend Monolith with Two API Surfaces
 
 ## Decision
 
-The backend will expose a REST API using ASP.NET Core Web API.
+The backend will be implemented as one deployable monolith. Inside this monolith, the API layer will expose two logical REST API surfaces:
+
+```txt
+User API
+Admin API
+```
 
 ## Reason
 
-The system needs one shared API used by three clients:
+The MVP does not need distributed services. A monolith keeps local development, deployment, database access and testing simpler while still allowing clean internal separation.
 
-```txt
-CitizenMobile
-CitizenWeb
-AdminWeb
-```
-
-REST API is simple, understandable and suitable for the MVP scope. It allows mobile and web applications to communicate with the same backend using HTTP endpoints.
+User-facing use cases and admin use cases have different authorization rules and different client applications, so their HTTP endpoints should be separated at the API boundary.
 
 ## Consequences
 
 Positive consequences:
 
-- one shared backend for all clients,
+- one backend deployment,
+- one database and one transaction boundary,
+- no network calls between backend modules,
+- clear separation between citizen and admin endpoints,
+- simpler local development and presentation.
+
+Negative consequences:
+
+- strong discipline is required to avoid mixing admin and citizen controllers,
+- the monolith must keep internal module boundaries clear,
+- future extraction into separate services would require deliberate refactoring.
+
+---
+
+# 5. Decision: ASP.NET Core Web API
+
+## Decision
+
+The backend monolith will expose REST APIs using ASP.NET Core Web API.
+
+## Reason
+
+The system needs HTTP APIs used by three clients:
+
+```txt
+CitizenMobile -> User API
+CitizenWeb    -> User API
+AdminWeb      -> Admin API
+```
+
+REST API is simple, understandable and suitable for the MVP scope. It allows mobile and web applications to communicate with the same backend monolith using HTTP endpoints.
+
+## Consequences
+
+Positive consequences:
+
+- one backend monolith for all clients,
+- separate User API and Admin API endpoint surfaces,
 - clear endpoint structure,
 - easy testing using Swagger,
 - simple integration with Angular and React Native,
@@ -174,11 +214,11 @@ Negative consequences:
 
 ---
 
-# 5. Decision: Clean Architecture for Backend
+# 6. Decision: Internal Clean Architecture for Backend
 
 ## Decision
 
-The backend will follow Clean Architecture.
+The backend monolith will follow internal Clean Architecture.
 
 The planned backend layers are:
 
@@ -194,7 +234,7 @@ Mobywatel.Shared
 
 The project contains multiple business modules, including authentication, citizens, users, documents, document types, activity logs and dashboard. Clean Architecture helps separate business logic from infrastructure and API controllers.
 
-This structure makes the backend easier to test, maintain and extend.
+This structure makes the backend easier to test, maintain and extend without splitting it into multiple deployable services.
 
 ## Layer Responsibilities
 
@@ -268,7 +308,46 @@ Negative consequences:
 
 ---
 
-# 6. Decision: Entity Framework Core
+# 7. Decision: CQRS and MediatR in Application Layer
+
+## Decision
+
+The Application layer will use CQRS with MediatR.
+
+Commands will represent write operations. Queries will represent read operations. Each command or query will have a dedicated handler.
+
+```txt
+CreateDocumentCommand
+CreateDocumentCommandHandler
+GetCitizenDocumentsQuery
+GetCitizenDocumentsQueryHandler
+```
+
+## Reason
+
+The project has clear use cases for authentication, citizen profile, document management, admin management and activity logs. CQRS keeps use cases explicit and prevents controllers from becoming business-logic containers.
+
+MediatR gives a simple in-process dispatch mechanism inside the monolith and supports pipeline behaviors for validation, authorization, logging and exception handling.
+
+## Consequences
+
+Positive consequences:
+
+- controllers stay thin,
+- commands and queries map directly to use cases,
+- validation and authorization can be handled consistently,
+- handlers are easy to unit test,
+- no distributed messaging is required for the MVP.
+
+Negative consequences:
+
+- simple operations require command/query and handler files,
+- developers must keep command and query responsibilities separate,
+- MediatR pipeline behavior order must be configured carefully.
+
+---
+
+# 8. Decision: Entity Framework Core
 
 ## Decision
 
@@ -298,7 +377,7 @@ Negative consequences:
 
 ---
 
-# 7. Decision: PostgreSQL Database
+# 9. Decision: PostgreSQL Database
 
 ## Decision
 
@@ -342,7 +421,7 @@ Negative consequences:
 
 ---
 
-# 8. Decision: PostgreSQL in Docker Compose
+# 10. Decision: PostgreSQL in Docker Compose
 
 ## Decision
 
@@ -394,7 +473,7 @@ Negative consequences:
 
 ---
 
-# 9. Decision: Angular for Web Applications
+# 11. Decision: Angular for Web Applications
 
 ## Decision
 
@@ -432,7 +511,7 @@ Negative consequences:
 
 ---
 
-# 10. Decision: Separate Citizen Web and Admin Web Applications
+# 12. Decision: Separate Citizen Web and Admin Web Applications
 
 ## Decision
 
@@ -469,7 +548,7 @@ Negative consequences:
 
 ---
 
-# 11. Decision: React Native for Mobile Application
+# 13. Decision: React Native for Mobile Application
 
 ## Decision
 
@@ -487,7 +566,7 @@ Positive consequences:
 - TypeScript support,
 - component-based UI,
 - good fit for document preview screens,
-- easier API integration with the shared backend.
+- easier API integration with the User API.
 
 Negative consequences:
 
@@ -497,7 +576,7 @@ Negative consequences:
 
 ---
 
-# 12. Decision: TypeScript on Frontend and Mobile
+# 14. Decision: TypeScript on Frontend and Mobile
 
 ## Decision
 
@@ -524,7 +603,7 @@ Negative consequences:
 
 ---
 
-# 13. Decision: JWT Authentication
+# 15. Decision: JWT Authentication
 
 ## Decision
 
@@ -532,17 +611,22 @@ Authentication will use JWT access tokens and refresh tokens.
 
 ## Reason
 
-The system has three client applications that communicate with the backend API. JWT authentication works well for stateless API authorization and can be used by web and mobile clients.
+The system has three client applications that communicate with User API or Admin API. JWT authentication works well for stateless API authorization and can be used by web and mobile clients.
 
 Refresh tokens allow users to continue sessions without logging in repeatedly.
 
 ## Planned Endpoints
 
 ```txt
-POST /api/auth/login
-POST /api/auth/refresh-token
-POST /api/auth/logout
-GET  /api/auth/me
+POST /api/user/auth/login
+POST /api/user/auth/refresh-token
+POST /api/user/auth/logout
+GET  /api/user/auth/me
+
+POST /api/admin/auth/login
+POST /api/admin/auth/refresh-token
+POST /api/admin/auth/logout
+GET  /api/admin/auth/me
 ```
 
 ## Consequences
@@ -562,7 +646,7 @@ Negative consequences:
 
 ---
 
-# 14. Decision: Role-Based Authorization
+# 16. Decision: Role-Based Authorization
 
 ## Decision
 
@@ -622,11 +706,11 @@ Negative consequences:
 
 ---
 
-# 15. Decision: Swagger / OpenAPI Documentation
+# 17. Decision: Swagger / OpenAPI Documentation
 
 ## Decision
 
-The backend API will expose Swagger / OpenAPI documentation.
+The backend monolith will expose Swagger / OpenAPI documentation for User API and Admin API.
 
 ## Reason
 
@@ -648,27 +732,34 @@ Negative consequences:
 
 ---
 
-# 16. Decision: REST Endpoint Structure
+# 18. Decision: REST Endpoint Structure
 
 ## Decision
 
-The backend API will be grouped into clear endpoint areas.
+The backend monolith will expose two logical REST endpoint areas.
 
 Planned endpoint groups:
 
 ```txt
-/api/auth
-/api/citizens
-/api/admin
-/api/super-admin
-/api/documents
-/api/document-types
-/api/activity-logs
+User API
+  /api/user/auth
+  /api/user/profile
+  /api/user/documents
+  /api/user/activity-logs
+
+Admin API
+  /api/admin/auth
+  /api/admin/dashboard
+  /api/admin/users
+  /api/admin/admins
+  /api/admin/documents
+  /api/admin/document-types
+  /api/admin/activity-logs
 ```
 
 ## Reason
 
-This structure matches the main modules and use cases of the system. It makes the API easier to understand and easier to test.
+This structure matches the main modules and use cases of the system. It keeps citizen-facing endpoints separate from administration endpoints while both still use the same backend monolith and Application layer.
 
 ## Consequences
 
@@ -682,11 +773,12 @@ Positive consequences:
 Negative consequences:
 
 - endpoint naming must stay consistent,
-- shared operations must be placed carefully to avoid confusion.
+- shared operations must be placed carefully to avoid confusion,
+- authorization must be verified in handlers or policies, not only by route prefix.
 
 ---
 
-# 17. Decision: Activity Logging
+# 19. Decision: Activity Logging
 
 ## Decision
 
@@ -730,7 +822,7 @@ Negative consequences:
 
 ---
 
-# 18. Decision: QR Code Preview in MVP
+# 20. Decision: QR Code Preview in MVP
 
 ## Decision
 
@@ -756,7 +848,7 @@ Negative consequences:
 
 ---
 
-# 19. Decision: Docker for Local Development
+# 21. Decision: Docker for Local Development
 
 ## Decision
 
@@ -767,7 +859,7 @@ At minimum, Docker Compose will run PostgreSQL.
 Optionally, Docker can also be used for:
 
 ```txt
-Backend API
+Backend Monolith
 CitizenWeb
 AdminWeb
 CitizenMobile development container
@@ -794,7 +886,7 @@ Negative consequences:
 
 ---
 
-# 20. Decision: MVP Does Not Integrate with Real Government Systems
+# 22. Decision: MVP Does Not Integrate with Real Government Systems
 
 ## Decision
 
@@ -821,7 +913,7 @@ Negative consequences:
 
 ---
 
-# 21. Decision: Seed Data for Demo
+# 23. Decision: Seed Data for Demo
 
 ## Decision
 
@@ -865,7 +957,7 @@ Negative consequences:
 
 ---
 
-# 22. Decision: Testing Strategy
+# 24. Decision: Testing Strategy
 
 ## Decision
 
@@ -900,7 +992,7 @@ Negative consequences:
 
 ---
 
-# 23. Initial Implementation Priority
+# 25. Initial Implementation Priority
 
 The implementation should follow this order:
 
@@ -927,13 +1019,15 @@ This order is recommended because later modules depend on earlier backend founda
 
 ---
 
-# 24. Summary of Accepted Decisions
+# 26. Summary of Accepted Decisions
 
 | Area | Decision |
 |---|---|
 | Backend language | C# |
 | Backend framework | .NET / ASP.NET Core Web API |
-| Backend architecture | Clean Architecture |
+| Backend architecture | Backend monolith with internal Clean Architecture |
+| API surfaces | User API and Admin API |
+| Application patterns | CQRS + MediatR |
 | ORM | Entity Framework Core |
 | Database | PostgreSQL |
 | Local database setup | Docker Compose |
@@ -950,10 +1044,10 @@ This order is recommended because later modules depend on earlier backend founda
 
 ---
 
-# 25. Final Technical Direction
+# 27. Final Technical Direction
 
-The project will use a .NET C# backend with Clean Architecture, PostgreSQL database running in Docker Compose, Angular web applications and a React Native mobile application.
+The project will use a .NET C# backend monolith with internal Clean Architecture, PostgreSQL database running in Docker Compose, Angular web applications and a React Native mobile application.
 
-The backend will expose one shared REST API used by all clients. Authentication will use JWT tokens, and access control will be based on three roles: Citizen, Admin and SuperAdmin.
+The backend will expose two logical REST API surfaces: User API for citizen-facing clients and Admin API for the administration panel. Authentication will use JWT tokens, access control will be based on three roles: Citizen, Admin and SuperAdmin, and application use cases will be implemented with CQRS + MediatR.
 
 The MVP focuses on a clean modular structure, working document management, activity logging, local Docker-based setup and clear documentation.

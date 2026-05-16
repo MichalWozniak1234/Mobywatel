@@ -6,6 +6,15 @@ Authorization defines what an authenticated user is allowed to do in the system.
 
 The Mobywatel MVP uses role-based authorization with additional ownership checks for citizen data.
 
+The backend is one monolith with two API surfaces:
+
+```txt
+User API   - citizen-facing endpoints
+Admin API  - administration endpoints
+```
+
+Route separation improves clarity, but it does not replace authorization policies or ownership checks. Controllers and MediatR handlers must still enforce access rules.
+
 ---
 
 ## 1. Authorization Goal
@@ -243,6 +252,8 @@ Example policy meaning:
 
 In ASP.NET Core, these policies can be configured in the API project.
 
+User API controllers should normally require `CitizenOnly` or ownership checks. Admin API controllers should normally require `AdminOrSuperAdmin` or `SuperAdminOnly`, depending on the operation.
+
 Example concept:
 
 ```csharp
@@ -267,17 +278,17 @@ A Citizen must only access resources that belong to their own account.
 Ownership checks are required for:
 
 ```txt
-GET /api/citizens/me
-GET /api/citizens/me/documents
-GET /api/citizens/me/activity-logs
-GET /api/documents/{id}
-GET /api/documents/{id}/qr-code
+GET /api/user/profile
+GET /api/user/documents
+GET /api/user/activity-logs
+GET /api/user/documents/{id}
+GET /api/user/documents/{id}/qr-code
 ```
 
 For example, a Citizen can call:
 
 ```txt
-GET /api/documents/{id}
+GET /api/user/documents/{id}
 ```
 
 but only if the document belongs to the currently authenticated citizen.
@@ -314,39 +325,44 @@ For the MVP, `403 Forbidden` is clearer because it directly communicates that th
 
 | Endpoint | Citizen | Admin | SuperAdmin |
 |---|---:|---:|---:|
-| `POST /api/auth/login` | Yes | Yes | Yes |
-| `POST /api/auth/refresh-token` | Yes | Yes | Yes |
-| `POST /api/auth/logout` | Yes | Yes | Yes |
-| `GET /api/auth/me` | Yes | Yes | Yes |
-| `GET /api/citizens/me` | Yes | No | No |
-| `GET /api/citizens/me/documents` | Yes | No | No |
-| `GET /api/citizens/me/activity-logs` | Yes | No | No |
-| `GET /api/citizens/{id}` | No | Yes | Yes |
-| `PUT /api/citizens/{id}` | No | Yes | Yes |
+| `POST /api/user/auth/login` | Yes | No | No |
+| `POST /api/user/auth/refresh-token` | Yes | No | No |
+| `POST /api/user/auth/logout` | Yes | No | No |
+| `GET /api/user/auth/me` | Yes | No | No |
+| `POST /api/admin/auth/login` | No | Yes | Yes |
+| `POST /api/admin/auth/refresh-token` | No | Yes | Yes |
+| `POST /api/admin/auth/logout` | No | Yes | Yes |
+| `GET /api/admin/auth/me` | No | Yes | Yes |
+| `GET /api/user/profile` | Yes | No | No |
+| `GET /api/user/documents` | Yes | No | No |
+| `GET /api/user/activity-logs` | Yes | No | No |
+| `GET /api/admin/users/{id}` | No | Yes | Yes |
+| `PUT /api/admin/users/{id}` | No | Yes | Yes |
 | `GET /api/admin/dashboard` | No | Yes | Yes |
 | `GET /api/admin/users` | No | Yes | Yes |
 | `GET /api/admin/users/{id}` | No | Yes | Yes |
 | `POST /api/admin/users` | No | Yes | Yes |
 | `PUT /api/admin/users/{id}` | No | Yes | Yes |
 | `PATCH /api/admin/users/{id}/status` | No | Yes | Yes |
-| `GET /api/super-admin/admins` | No | No | Yes |
-| `POST /api/super-admin/admins` | No | No | Yes |
-| `PUT /api/super-admin/admins/{id}` | No | No | Yes |
-| `PATCH /api/super-admin/admins/{id}/status` | No | No | Yes |
-| `GET /api/documents` | No | Yes | Yes |
-| `GET /api/documents/{id}` | Own only | Yes | Yes |
-| `POST /api/documents` | No | Yes | Yes |
-| `PUT /api/documents/{id}` | No | Yes | Yes |
-| `PATCH /api/documents/{id}/status` | No | Yes | Yes |
-| `DELETE /api/documents/{id}` | No | Yes | Yes |
-| `GET /api/documents/{id}/qr-code` | Own only | Yes | Yes |
-| `GET /api/document-types` | No | Yes | Yes |
-| `GET /api/document-types/{id}` | No | Yes | Yes |
-| `POST /api/document-types` | No | No | Yes |
-| `PUT /api/document-types/{id}` | No | No | Yes |
-| `PATCH /api/document-types/{id}/status` | No | No | Yes |
-| `GET /api/activity-logs` | No | Yes | Yes |
-| `GET /api/activity-logs/{id}` | No | Yes | Yes |
+| `GET /api/admin/admins` | No | No | Yes |
+| `POST /api/admin/admins` | No | No | Yes |
+| `PUT /api/admin/admins/{id}` | No | No | Yes |
+| `PATCH /api/admin/admins/{id}/status` | No | No | Yes |
+| `GET /api/admin/documents` | No | Yes | Yes |
+| `GET /api/admin/documents/{id}` | No | Yes | Yes |
+| `POST /api/admin/documents` | No | Yes | Yes |
+| `PUT /api/admin/documents/{id}` | No | Yes | Yes |
+| `PATCH /api/admin/documents/{id}/status` | No | Yes | Yes |
+| `DELETE /api/admin/documents/{id}` | No | Yes | Yes |
+| `GET /api/user/documents/{id}` | Own only | No | No |
+| `GET /api/user/documents/{id}/qr-code` | Own only | No | No |
+| `GET /api/admin/document-types` | No | Yes | Yes |
+| `GET /api/admin/document-types/{id}` | No | Yes | Yes |
+| `POST /api/admin/document-types` | No | No | Yes |
+| `PUT /api/admin/document-types/{id}` | No | No | Yes |
+| `PATCH /api/admin/document-types/{id}/status` | No | No | Yes |
+| `GET /api/admin/activity-logs` | No | Yes | Yes |
+| `GET /api/admin/activity-logs/{id}` | No | Yes | Yes |
 
 ---
 
@@ -717,7 +733,7 @@ Store role names as constants.
 
 ## 18. Final Authorization Summary
 
-The Mobywatel MVP uses ASP.NET Core Identity, JWT access tokens and role-based authorization.
+The Mobywatel MVP uses ASP.NET Core Identity, JWT access tokens and role-based authorization inside one backend monolith.
 
 The system has three roles:
 
@@ -739,4 +755,4 @@ The most important rule is:
 Authorization must always be enforced by the backend.
 ```
 
-Frontend guards and UI visibility are useful for user experience, but they do not replace backend authorization checks.
+Frontend guards, route prefixes and UI visibility are useful for user experience, but they do not replace backend authorization checks in policies and MediatR application handlers.

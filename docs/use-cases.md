@@ -13,10 +13,14 @@ The application consists of:
 - Citizen Mobile Application,
 - Citizen Web Application,
 - Admin Web Panel,
-- Backend API,
+- Backend Monolith,
+- User API,
+- Admin API,
 - Relational Database.
 
 The main purpose of the system is to allow citizens to view their digital documents and allow administrators to manage users, documents, document types, statuses and activity logs.
+
+Citizen use cases are exposed through the User API. Administration use cases are exposed through the Admin API. Both API surfaces use the same backend monolith, internal Clean Architecture and Application layer implemented with CQRS + MediatR.
 
 ---
 
@@ -129,13 +133,13 @@ The Citizen wants to log in to the mobile application or citizen web application
 - Citizen account exists in the system.
 - Citizen account is active.
 - Citizen knows valid email and password.
-- Backend API is available.
+- User API is available.
 
 ## Main Flow
 
 1. Citizen opens the mobile application or citizen web application.
 2. Citizen enters email and password.
-3. Application sends login request to the backend API.
+3. Application sends login request to the User API.
 4. Backend validates the credentials.
 5. Backend checks if the user account is active.
 6. Backend generates JWT access token.
@@ -167,7 +171,7 @@ The Citizen wants to log in to the mobile application or citizen web application
 ## Related API Endpoint
 
 ```txt
-POST /api/auth/login
+POST /api/user/auth/login
 ```
 
 ---
@@ -187,13 +191,13 @@ The Admin wants to log in to the admin web panel.
 - Admin account exists in the system.
 - Admin account is active.
 - Admin knows valid email and password.
-- Backend API is available.
+- Admin API is available.
 
 ## Main Flow
 
 1. Admin opens the admin web panel.
 2. Admin enters email and password.
-3. Admin web panel sends login request to the backend API.
+3. Admin web panel sends login request to the Admin API.
 4. Backend validates the credentials.
 5. Backend checks if the user has Admin or SuperAdmin role.
 6. Backend generates JWT access token.
@@ -219,7 +223,7 @@ The Admin wants to log in to the admin web panel.
 ## Related API Endpoint
 
 ```txt
-POST /api/auth/login
+POST /api/admin/auth/login
 ```
 
 ---
@@ -242,7 +246,7 @@ The user wants to log out from the application.
 ## Main Flow
 
 1. User clicks the logout button.
-2. Application sends logout request to the backend API.
+2. Application sends logout request to the relevant User API or Admin API.
 3. Backend invalidates or revokes the refresh token.
 4. Application removes local authentication data.
 5. User is redirected to the login page.
@@ -255,7 +259,8 @@ The user wants to log out from the application.
 ## Related API Endpoint
 
 ```txt
-POST /api/auth/logout
+POST /api/user/auth/logout
+POST /api/admin/auth/logout
 ```
 
 ---
@@ -279,7 +284,7 @@ The application wants to refresh the access token without forcing the user to lo
 ## Main Flow
 
 1. Application detects that the access token is expired or close to expiration.
-2. Application sends refresh token request to the backend API.
+2. Application sends refresh token request to the relevant User API or Admin API.
 3. Backend validates the refresh token.
 4. Backend generates a new access token.
 5. Backend returns a new access token to the application.
@@ -301,7 +306,8 @@ The application wants to refresh the access token without forcing the user to lo
 ## Related API Endpoint
 
 ```txt
-POST /api/auth/refresh-token
+POST /api/user/auth/refresh-token
+POST /api/admin/auth/refresh-token
 ```
 
 ---
@@ -342,7 +348,7 @@ The Citizen wants to view personal profile data.
 ## Related API Endpoint
 
 ```txt
-GET /api/citizens/me
+GET /api/user/profile
 ```
 
 ---
@@ -388,7 +394,7 @@ The Admin wants to view citizen profile details.
 ## Related API Endpoint
 
 ```txt
-GET /api/citizens/{id}
+GET /api/admin/users/{id}
 ```
 
 ---
@@ -414,7 +420,7 @@ The Admin wants to update citizen profile data.
 1. Admin opens citizen details.
 2. Admin edits selected citizen data.
 3. Admin submits the form.
-4. Admin web panel sends update request to the backend API.
+4. Admin web panel sends update request to the Admin API.
 5. Backend validates input data.
 6. Backend updates citizen profile in the database.
 7. Backend saves activity log.
@@ -437,7 +443,7 @@ The Admin wants to update citizen profile data.
 ## Related API Endpoint
 
 ```txt
-PUT /api/citizens/{id}
+PUT /api/admin/users/{id}
 ```
 
 ---
@@ -486,7 +492,7 @@ The Citizen wants to view a list of assigned documents.
 ## Related API Endpoint
 
 ```txt
-GET /api/citizens/me/documents
+GET /api/user/documents
 ```
 
 ---
@@ -540,7 +546,7 @@ The Citizen wants to view details of a selected document.
 ## Related API Endpoint
 
 ```txt
-GET /api/documents/{id}
+GET /api/user/documents/{id}
 ```
 
 ---
@@ -574,7 +580,7 @@ The Citizen wants to check whether a document is active, expired, blocked, pendi
 ## Related API Endpoint
 
 ```txt
-GET /api/documents/{id}
+GET /api/user/documents/{id}
 ```
 
 ---
@@ -624,7 +630,7 @@ The Citizen wants to display a QR code connected with a selected document.
 ## Related API Endpoint
 
 ```txt
-GET /api/documents/{id}/qr-code
+GET /api/user/documents/{id}/qr-code
 ```
 
 ---
@@ -671,7 +677,7 @@ The Citizen wants to view activity history related to own account.
 ## Related API Endpoint
 
 ```txt
-GET /api/citizens/me/activity-logs
+GET /api/user/activity-logs
 ```
 
 ---
@@ -841,7 +847,7 @@ The Admin wants to create a new citizen account.
 1. Admin opens create user form.
 2. Admin enters citizen account data.
 3. Admin submits the form.
-4. Admin web panel sends create user request to the backend API.
+4. Admin web panel sends create user request to the Admin API.
 5. Backend validates input data.
 6. Backend checks if email is unique.
 7. Backend hashes the password.
@@ -899,7 +905,7 @@ The Admin wants to update selected user data.
 1. Admin opens user details.
 2. Admin edits user data.
 3. Admin submits changes.
-4. Admin web panel sends update request to backend API.
+4. Admin web panel sends update request to Admin API.
 5. Backend validates input data.
 6. Backend updates user data.
 7. Backend saves activity log.
@@ -1023,7 +1029,7 @@ The Admin wants to view all documents in the system.
 ## Related API Endpoint
 
 ```txt
-GET /api/documents
+GET /api/admin/documents
 ```
 
 ---
@@ -1069,7 +1075,7 @@ The Admin wants to view document details.
 ## Related API Endpoint
 
 ```txt
-GET /api/documents/{id}
+GET /api/admin/documents/{id}
 ```
 
 ---
@@ -1132,7 +1138,7 @@ The Admin wants to create a new document.
 ## Related API Endpoint
 
 ```txt
-POST /api/documents
+POST /api/admin/documents
 ```
 
 ---
@@ -1190,7 +1196,7 @@ The Admin wants to assign a document to a selected citizen.
 ## Related API Endpoint
 
 ```txt
-PUT /api/documents/{id}
+PUT /api/admin/documents/{id}
 ```
 
 ---
@@ -1245,7 +1251,7 @@ The Admin wants to update document data.
 ## Related API Endpoint
 
 ```txt
-PUT /api/documents/{id}
+PUT /api/admin/documents/{id}
 ```
 
 ---
@@ -1312,7 +1318,7 @@ Rejected
 ## Related API Endpoint
 
 ```txt
-PATCH /api/documents/{id}/status
+PATCH /api/admin/documents/{id}/status
 ```
 
 ---
@@ -1361,7 +1367,7 @@ The Admin wants to delete a document from the system.
 ## Related API Endpoint
 
 ```txt
-DELETE /api/documents/{id}
+DELETE /api/admin/documents/{id}
 ```
 
 ---
@@ -1408,7 +1414,7 @@ The Admin wants to view available document types.
 ## Related API Endpoint
 
 ```txt
-GET /api/document-types
+GET /api/admin/document-types
 ```
 
 ---
@@ -1465,7 +1471,7 @@ The SuperAdmin wants to create a new document type.
 ## Related API Endpoint
 
 ```txt
-POST /api/document-types
+POST /api/admin/document-types
 ```
 
 ---
@@ -1520,7 +1526,7 @@ The SuperAdmin wants to update existing document type data.
 ## Related API Endpoint
 
 ```txt
-PUT /api/document-types/{id}
+PUT /api/admin/document-types/{id}
 ```
 
 ---
@@ -1576,7 +1582,7 @@ The SuperAdmin wants to deactivate a document type.
 ## Related API Endpoint
 
 ```txt
-PATCH /api/document-types/{id}/status
+PATCH /api/admin/document-types/{id}/status
 ```
 
 ---
@@ -1623,7 +1629,7 @@ The Admin wants to view system activity logs.
 ## Related API Endpoint
 
 ```txt
-GET /api/activity-logs
+GET /api/admin/activity-logs
 ```
 
 ---
@@ -1668,7 +1674,7 @@ The Admin wants to view details of a selected activity log.
 ## Related API Endpoint
 
 ```txt
-GET /api/activity-logs/{id}
+GET /api/admin/activity-logs/{id}
 ```
 
 ---
@@ -1715,7 +1721,7 @@ The SuperAdmin wants to view all administrator accounts.
 ## Related API Endpoint
 
 ```txt
-GET /api/super-admin/admins
+GET /api/admin/admins
 ```
 
 ---
@@ -1774,7 +1780,7 @@ The SuperAdmin wants to create a new administrator account.
 ## Related API Endpoint
 
 ```txt
-POST /api/super-admin/admins
+POST /api/admin/admins
 ```
 
 ---
@@ -1829,7 +1835,7 @@ The SuperAdmin wants to update administrator account data.
 ## Related API Endpoint
 
 ```txt
-PUT /api/super-admin/admins/{id}
+PUT /api/admin/admins/{id}
 ```
 
 ---
@@ -1883,7 +1889,7 @@ The SuperAdmin wants to activate or deactivate an admin account.
 ## Related API Endpoint
 
 ```txt
-PATCH /api/super-admin/admins/{id}/status
+PATCH /api/admin/admins/{id}/status
 ```
 
 ---
@@ -1995,4 +2001,4 @@ The Admin focuses on managing users, citizens and documents.
 
 The SuperAdmin focuses on system-level management, including administrators and document types.
 
-All use cases are served by one shared backend API, which allows the mobile application, citizen web application and admin web panel to work with the same business logic and database.
+All use cases are served by one backend monolith. Citizen-facing use cases are available through the User API, administration use cases are available through the Admin API, and both use the same business logic and database.

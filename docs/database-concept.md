@@ -10,16 +10,18 @@ The backend uses:
 ASP.NET Core Web API
 ASP.NET Core Identity
 Entity Framework Core
+MediatR
 PostgreSQL
 Docker Compose
 ```
 
-The database is accessed only by the backend API. Mobile and web applications communicate with the database indirectly through the backend.
+The database is accessed only by the backend monolith. Mobile and web applications communicate with the database indirectly through User API or Admin API.
 
 ```txt
 CitizenMobile  ─┐
-CitizenWeb     ├──>  Backend API  ───>  PostgreSQL Database
-AdminWeb       ┘
+CitizenWeb     ├──>  User API  ─┐
+                               ├──> Backend Monolith ───> PostgreSQL Database
+AdminWeb       ─────>  Admin API ┘
 ```
 
 ---
@@ -865,16 +867,23 @@ RefreshTokenConfiguration.cs
 
 # 14. Database and API Mapping
 
-The database supports the following API endpoint groups:
+The database supports the following API endpoint groups exposed by the backend monolith:
 
 ```txt
-/api/auth
-/api/citizens
-/api/admin
-/api/super-admin
-/api/documents
-/api/document-types
-/api/activity-logs
+User API
+  /api/user/auth
+  /api/user/profile
+  /api/user/documents
+  /api/user/activity-logs
+
+Admin API
+  /api/admin/auth
+  /api/admin/dashboard
+  /api/admin/users
+  /api/admin/admins
+  /api/admin/documents
+  /api/admin/document-types
+  /api/admin/activity-logs
 ```
 
 ## 14.1 Auth

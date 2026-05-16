@@ -16,7 +16,8 @@ The MVP should deliver a working demo system where:
 - Citizens can view document details, status, QR code and activity history.
 - Admins can manage citizen users and documents.
 - SuperAdmins can manage administrators and document types.
-- The backend exposes one shared REST API.
+- The backend is one monolith with User API and Admin API surfaces.
+- Application use cases use CQRS + MediatR.
 - The database uses PostgreSQL and ASP.NET Core Identity.
 - The system can be started locally using Docker.
 
@@ -67,7 +68,7 @@ E18 - Documentation
 
 ## Goal
 
-Create the base solution structure and prepare the backend for Clean Architecture.
+Create the base solution structure and prepare the backend monolith for internal Clean Architecture.
 
 ## User Value
 
@@ -95,6 +96,8 @@ Acceptance criteria:
 - Solution builds successfully.
 - Projects reference each other according to Clean Architecture rules.
 - Domain layer does not depend on Application, Infrastructure or API.
+- `Mobywatel.Api` contains separated User API and Admin API controller folders.
+- The backend is deployable as one monolith.
 
 ---
 
@@ -110,6 +113,8 @@ Acceptance criteria:
 - `Mobywatel.Application` has `DependencyInjection.cs`.
 - `Mobywatel.Infrastructure` has `DependencyInjection.cs`.
 - API project registers required services.
+- MediatR is registered for Application handlers.
+- Common MediatR pipeline behaviors can be registered from Application.
 
 ---
 
@@ -316,7 +321,7 @@ As a user, I want to log in using email and password so that I can access the ap
 Endpoint:
 
 ```txt
-POST /api/auth/login
+POST /api/user/auth/login
 ```
 
 Acceptance criteria:
@@ -357,7 +362,7 @@ As a logged-in user, I want my access token to be refreshed so that I do not nee
 Endpoint:
 
 ```txt
-POST /api/auth/refresh-token
+POST /api/user/auth/refresh-token
 ```
 
 Acceptance criteria:
@@ -379,7 +384,7 @@ As a user, I want to log out so that my session is ended.
 Endpoint:
 
 ```txt
-POST /api/auth/logout
+POST /api/user/auth/logout
 ```
 
 Acceptance criteria:
@@ -401,7 +406,7 @@ As a logged-in user, I want to check my current account data.
 Endpoint:
 
 ```txt
-GET /api/auth/me
+GET /api/user/auth/me
 ```
 
 Acceptance criteria:
@@ -473,7 +478,7 @@ Citizens must only access their own profile and activity history.
 
 Acceptance criteria:
 
-- Citizen can access `GET /api/citizens/me`.
+- Citizen can access `GET /api/user/profile`.
 - Citizen cannot access admin citizen-management endpoints.
 - Admin and SuperAdmin can view citizen details.
 
@@ -501,7 +506,7 @@ As a Citizen, I want to view my profile.
 Endpoint:
 
 ```txt
-GET /api/citizens/me
+GET /api/user/profile
 ```
 
 Acceptance criteria:
@@ -522,7 +527,7 @@ As an Admin, I want to view citizen details.
 Endpoint:
 
 ```txt
-GET /api/citizens/{id}
+GET /api/admin/users/{id}
 ```
 
 Acceptance criteria:
@@ -544,7 +549,7 @@ As an Admin, I want to update citizen data.
 Endpoint:
 
 ```txt
-PUT /api/citizens/{id}
+PUT /api/admin/users/{id}
 ```
 
 Acceptance criteria:
@@ -578,7 +583,7 @@ As an Admin, I want to view available document types.
 Endpoint:
 
 ```txt
-GET /api/document-types
+GET /api/admin/document-types
 ```
 
 Acceptance criteria:
@@ -599,7 +604,7 @@ As a SuperAdmin, I want to create a document type.
 Endpoint:
 
 ```txt
-POST /api/document-types
+POST /api/admin/document-types
 ```
 
 Acceptance criteria:
@@ -622,7 +627,7 @@ As a SuperAdmin, I want to update a document type.
 Endpoint:
 
 ```txt
-PUT /api/document-types/{id}
+PUT /api/admin/document-types/{id}
 ```
 
 Acceptance criteria:
@@ -643,7 +648,7 @@ As a SuperAdmin, I want to activate or deactivate document types.
 Endpoint:
 
 ```txt
-PATCH /api/document-types/{id}/status
+PATCH /api/admin/document-types/{id}/status
 ```
 
 Acceptance criteria:
@@ -677,7 +682,7 @@ As a Citizen, I want to view my assigned documents.
 Endpoint:
 
 ```txt
-GET /api/citizens/me/documents
+GET /api/user/documents
 ```
 
 Acceptance criteria:
@@ -698,7 +703,8 @@ As a user with access, I want to view document details.
 Endpoint:
 
 ```txt
-GET /api/documents/{id}
+GET /api/user/documents/{id}
+GET /api/admin/documents/{id}
 ```
 
 Acceptance criteria:
@@ -721,7 +727,7 @@ As an Admin, I want to view all documents.
 Endpoint:
 
 ```txt
-GET /api/documents
+GET /api/admin/documents
 ```
 
 Acceptance criteria:
@@ -742,7 +748,7 @@ As an Admin, I want to create a document and assign it to a citizen.
 Endpoint:
 
 ```txt
-POST /api/documents
+POST /api/admin/documents
 ```
 
 Acceptance criteria:
@@ -768,7 +774,7 @@ As an Admin, I want to update document data.
 Endpoint:
 
 ```txt
-PUT /api/documents/{id}
+PUT /api/admin/documents/{id}
 ```
 
 Acceptance criteria:
@@ -791,7 +797,7 @@ As an Admin, I want to update document status.
 Endpoint:
 
 ```txt
-PATCH /api/documents/{id}/status
+PATCH /api/admin/documents/{id}/status
 ```
 
 Allowed statuses:
@@ -823,7 +829,7 @@ As an Admin, I want to delete or deactivate a document.
 Endpoint:
 
 ```txt
-DELETE /api/documents/{id}
+DELETE /api/admin/documents/{id}
 ```
 
 Acceptance criteria:
@@ -872,7 +878,7 @@ As a Citizen, I want to display QR code for my document.
 Endpoint:
 
 ```txt
-GET /api/documents/{id}/qr-code
+GET /api/user/documents/{id}/qr-code
 ```
 
 Acceptance criteria:
@@ -921,7 +927,7 @@ As a Citizen, I want to view my activity history.
 Endpoint:
 
 ```txt
-GET /api/citizens/me/activity-logs
+GET /api/user/activity-logs
 ```
 
 Acceptance criteria:
@@ -942,7 +948,7 @@ As an Admin, I want to view activity logs.
 Endpoint:
 
 ```txt
-GET /api/activity-logs
+GET /api/admin/activity-logs
 ```
 
 Acceptance criteria:
@@ -964,7 +970,7 @@ As an Admin, I want to view activity log details.
 Endpoint:
 
 ```txt
-GET /api/activity-logs/{id}
+GET /api/admin/activity-logs/{id}
 ```
 
 Acceptance criteria:
@@ -1152,7 +1158,7 @@ As a SuperAdmin, I want to view administrator accounts.
 Endpoint:
 
 ```txt
-GET /api/super-admin/admins
+GET /api/admin/admins
 ```
 
 Acceptance criteria:
@@ -1173,7 +1179,7 @@ As a SuperAdmin, I want to create an Admin account.
 Endpoint:
 
 ```txt
-POST /api/super-admin/admins
+POST /api/admin/admins
 ```
 
 Acceptance criteria:
@@ -1195,7 +1201,7 @@ As a SuperAdmin, I want to update admin data.
 Endpoint:
 
 ```txt
-PUT /api/super-admin/admins/{id}
+PUT /api/admin/admins/{id}
 ```
 
 Acceptance criteria:
@@ -1216,7 +1222,7 @@ As a SuperAdmin, I want to activate or deactivate admin accounts.
 Endpoint:
 
 ```txt
-PATCH /api/super-admin/admins/{id}/status
+PATCH /api/admin/admins/{id}/status
 ```
 
 Acceptance criteria:
@@ -1348,7 +1354,7 @@ Acceptance criteria:
 
 Acceptance criteria:
 
-- Login page works with backend API.
+- Login page works with User API.
 - Invalid credentials show error.
 - Successful login redirects to dashboard.
 
@@ -1710,9 +1716,9 @@ The MVP backlog is complete when:
 - SuperAdmin can manage admins and document types.
 - Activity logs are saved for important actions.
 - Swagger/OpenAPI is available.
-- Citizen mobile app communicates with backend API.
-- Citizen web app communicates with backend API.
-- Admin web panel communicates with backend API.
+- Citizen mobile app communicates with User API.
+- Citizen web app communicates with User API.
+- Admin web panel communicates with Admin API.
 - README explains how to start and test the project.
 
 ---
