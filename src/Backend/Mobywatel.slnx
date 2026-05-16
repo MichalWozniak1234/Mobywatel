@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Mobywatel.Api/Mobywatel.Api.csproj" Id="14bb8c51-f360-4032-9d87-eb4e3f221754" />
+  <Project Path="Mobywatel.Application/Mobywatel.Application.csproj" Id="bd421a73-eb14-4f8d-a7a7-872464c3cf92" />
+  <Project Path="Mobywatel.Domain/Mobywatel.Domain.csproj" Id="cc5fe953-392b-42f4-9165-861ab1a634aa" />
+  <Project Path="Mobywatel.Infrastructure/Mobywatel.Infrastructure.csproj" Id="9e12b9db-d170-44c9-9cfe-63e33e8e9d17" />
+  <Project Path="Mobywatel.Shared/Mobywatel.Shared.csproj" Id="9b1227ae-a3c8-4cd3-9049-9654ac8696c8" />
+</Solution>
